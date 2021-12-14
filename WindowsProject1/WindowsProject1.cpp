@@ -51,9 +51,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	prev	= timeGetTime();	// ゲームループ用 過去の時間
 
 	// メイン ゲーム ループ
-	while (true) {
-		
+	while (TRUE) {
 		current = timeGetTime();
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			if (msg.message == WM_QUIT) {
+				break;
+			} else {
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}
+	
 		if (current - prev >= FRAME_TIME) {
 			Sleep(1);
 			current = timeGetTime();
@@ -71,7 +79,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 //		}
 //	}
 
-//  return (int) msg.wParam;
+//	return (int) msg.wParam;
 	return 0;
 }
 
