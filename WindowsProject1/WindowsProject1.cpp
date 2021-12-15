@@ -1,10 +1,16 @@
 ﻿// WindowsProject1.cpp : アプリケーションのエントリ ポイントを定義します。
 //
-#pragma comment (lib, "winmm.lib")
+#pragma comment(lib, "winmm.lib")
+// ======DirectXライプラリ=====
+#pragma comment(lib, "./lib/x86/d3d9.lib")
+#pragma comment(lib, "./lib/x86/d3dx9.lib")
+
 #include "framework.h"
 #include "WindowsProject1.h"
 #include "Windows.h"
 #include "timeapi.h"
+#include <d3d9.h>
+#include <d3dx9.h>
 
 #define MAX_LOADSTRING 100
 
@@ -15,7 +21,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // メイン ウィンドウ ク
 
 // このコード モジュールに含まれる関数の宣言を転送します:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
+BOOL                InitInstance(HINSTANCE, int, HWND*);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
@@ -33,7 +39,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	MyRegisterClass(hInstance);
 
 	// アプリケーション初期化の実行:
-	if (!InitInstance(hInstance, nCmdShow)) {
+	HWND hWnd;
+	if (!InitInstance(hInstance, nCmdShow, &hWnd)) {
 		return FALSE;
 	}
 
@@ -50,9 +57,52 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	timeBeginPeriod(1);
 	prev	= timeGetTime();	// ゲームループ用 過去の時間
 
+	// IDirect3D9の生成
+	LPDIRECT3D9 direct3d9 = Direct3DCreate9(D3D_SDK_VERSION);
+	if (direct3d9 == nullptr) { /*作成失敗*/ }
+
+	// IDirect3DDevice9コンポーネントの生成に必要な初期化をします。
+	D3DPRESENT_PARAMETERS d3dPram;
+	// バックバッファの数 => 一つ
+	d3dPram.BackBufferCount = 1;
+	// バックバッファのフォーマット => D3DFMT_UNKNOWN(フォーマットを知りません)
+	d3dPram.BackBufferFormat = D3DFMT_UNKNOWN;
+	/*
+		ウィンドウモード設定 => 定数で切り替え
+
+		true(ウィンドウ)、false(フルスクリーン)
+	*/
+	d3dPram.Windowed = true;
+	/*
+		スワップエフェクト => D3DSWAPEFFECT_DISCARD(自動設定)
+
+		スワップエフェクトとは：
+			バックバッファとフロントバッファへの切り替え方法
+	*/
+	d3dPram.SwapEffect = D3DSWAPEFFECT_DISCARD;
+
+	// IDirect3DDevice9コンポーネントを取得します。
+	IDirect3DDevice9* pD3ddev9 = nullptr;
+	direct3d9->CreateDevice(
+		D3DADAPTER_DEFAULT,
+		D3DDEVTYPE_HAL,
+		hWnd,
+		D3DCREATE_HARDWARE_VERTEXPROCESSING,
+		&d3dPram,
+		&pD3ddev9
+	);
+
+
+
+	//IDirect3D9* pDirect3D9 = Direct3DCreate9(D3D_SDK_VERSION);
+
+	MessageBox(NULL, L"Hello DxD9!!", L"Windows Programming", MB_OK);
+
 	// メイン ゲーム ループ
 	while (TRUE) {
 		current = timeGetTime();
+
+		// Message
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			if (msg.message == WM_QUIT) {
 				break;
@@ -73,7 +123,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	// メイン メッセージ ループ:
 //	while (GetMessage(&msg, nullptr, 0, 0)) {
-//		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
+//		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {割り込み
 //			TranslateMessage(&msg);
 //			DispatchMessage(&msg);
 //		}
@@ -120,18 +170,18 @@ ATOM MyRegisterClass(HINSTANCE hInstance) {
 //        この関数で、グローバル変数でインスタンス ハンドルを保存し、
 //        メイン プログラム ウィンドウを作成および表示します。
 //
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow, HWND* hWnd) {
 	hInst = hInstance; // グローバル変数にインスタンス ハンドルを格納する
 
-	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+	*hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
-	if (!hWnd) {
+	if (!*hWnd) {
 		return FALSE;
 	}
 
-	ShowWindow(hWnd, nCmdShow);
-	UpdateWindow(hWnd);
+	ShowWindow(*hWnd, nCmdShow);
+	UpdateWindow(*hWnd);
 
 	return TRUE;
 }
