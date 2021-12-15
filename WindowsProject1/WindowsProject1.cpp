@@ -11,6 +11,7 @@
 #include "timeapi.h"
 #include <d3d9.h>
 #include <d3dx9.h>
+#include <array>
 
 #define MAX_LOADSTRING 100
 
@@ -22,6 +23,9 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // メイン ウィンドウ ク
 // グラフィック関連
 constexpr DWORD FRAME_RATE = 30;				// フレームレート
 constexpr DOUBLE FRAME_TIME = (1 / FRAME_RATE) * 1000;
+LPDIRECT3D9 direct3d9 = nullptr;
+IDirect3DDevice9* pD3ddev9 = nullptr;			// グラフィックデバイス管理インターフェース
+D3DPRESENT_PARAMETERS d3dPram;
 
 // このコード モジュールに含まれる関数の宣言を転送します:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -29,6 +33,7 @@ BOOL                InitInstance(HINSTANCE, int, HWND*);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 BOOLEAN				initD3DP(D3DPRESENT_PARAMETERS*);
+BOOLEAN				createDirect3DDevice9(HWND, D3DDEVTYPE, DWORD);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -51,8 +56,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWSPROJECT1));
 
-	MSG msg;
-
 
 	DWORD current	= 0;
 	DWORD prev		= 0;
@@ -60,27 +63,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	prev	= timeGetTime();	// ゲームループ用 過去の時間
 
 	// IDirect3D9の生成
-	LPDIRECT3D9 direct3d9 = Direct3DCreate9(D3D_SDK_VERSION);
+	::direct3d9 = Direct3DCreate9(D3D_SDK_VERSION);
 	if (direct3d9 == nullptr) { /*作成失敗*/ }
 
-	D3DPRESENT_PARAMETERS d3dPram;
-	initD3DP(&d3dPram);
+	initD3DP(&::d3dPram);//D3DPRESENT_PARAMETERSを初期化
 
-	// IDirect3DDevice9コンポーネントを取得します。
-	IDirect3DDevice9* pD3ddev9 = nullptr;
-	direct3d9->CreateDevice(
-		D3DADAPTER_DEFAULT,
-		D3DDEVTYPE_HAL,
-		hWnd,
-		D3DCREATE_HARDWARE_VERTEXPROCESSING,
-		&d3dPram,
-		&pD3ddev9
-	);
+	if (createDirect3DDevice9(hWnd, D3DDEVTYPE_HAL, D3DCREATE_HARDWARE_VERTEXPROCESSING) == 0) {
+		std::array<D3DDEVTYPE, 3> typeArr = { D3DDEVTYPE_HAL, D3DDEVTYPE_SW, D3DDEVTYPE_SW };
+		std::array<DWORD, 3> d3dcArr = { D3DCREATE_SOFTWARE_VERTEXPROCESSING, D3DCREATE_HARDWARE_VERTEXPROCESSING, D3DCREATE_SOFTWARE_VERTEXPROCESSING };
+		for (size_t i = 0; i < 3; ++i) {
+			if (createDirect3DDevice9(hWnd, typeArr[i], d3dcArr[i]) == 0) break;
+		}
+	}
 
 
 	//MessageBox(NULL, L"Hello DxD9!!", L"Windows Programming", MB_OK);
 
-	// メイン ゲーム ループ
+	MSG msg;
+	// メイン ループ
 	while (TRUE) {
 		current = timeGetTime();
 
@@ -92,6 +92,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 			}
+		} else {
+			pD3ddev9->BeginScene();
+			// 描画
+			pD3ddev9->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+			pD3ddev9->EndScene();
+
+			pD3ddev9->Present(NULL, NULL, NULL, NULL); // バッグバッファから画面へ転送
 		}
 	
 		if (current - prev >= FRAME_TIME) {
@@ -112,7 +119,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 //	}
 
 //	return (int) msg.wParam;
+
+	::pD3ddev9->Release();
+	::direct3d9->Release();
+
 	return 0;
+
+}
+
+// ==================================================================
+// IDirect3DDevice9コンポーネントを取得します。
+// ==================================================================
+BOOLEAN createDirect3DDevice9(HWND hWnd, D3DDEVTYPE DeviceType, DWORD BehaviorFlags) {
+	HRESULT hr = direct3d9->CreateDevice(
+		D3DADAPTER_DEFAULT,
+		DeviceType,
+		hWnd,
+		BehaviorFlags,
+		&::d3dPram,
+		&::pD3ddev9 // LPDirect3DDevice9
+	);
+	if (hr != D3D_OK) return FALSE;
+	return TRUE;
 }
 // ==================================================================
 // D3DPRESENT_PARAMETER 構造体を初期化します。
