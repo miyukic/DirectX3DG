@@ -19,11 +19,16 @@ HINSTANCE hInst;                                // 現在のインターフェ�
 WCHAR szTitle[MAX_LOADSTRING];                  // タイトル バーのテキスト
 WCHAR szWindowClass[MAX_LOADSTRING];            // メイン ウィンドウ クラス名
 
+// グラフィック関連
+constexpr DWORD FRAME_RATE = 30;				// フレームレート
+constexpr DOUBLE FRAME_TIME = (1 / FRAME_RATE) * 1000;
+
 // このコード モジュールに含まれる関数の宣言を転送します:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int, HWND*);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+BOOLEAN				initD3DP(D3DPRESENT_PARAMETERS*);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -48,9 +53,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	MSG msg;
 
-	// フレームレート
-	const static DWORD FRAME_RATE = 30;
-	const static FLOAT FRAME_TIME = (1 / FRAME_RATE) * 1000;
 
 	DWORD current	= 0;
 	DWORD prev		= 0;
@@ -61,25 +63,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	LPDIRECT3D9 direct3d9 = Direct3DCreate9(D3D_SDK_VERSION);
 	if (direct3d9 == nullptr) { /*作成失敗*/ }
 
-	// IDirect3DDevice9コンポーネントの生成に必要な初期化をします。
 	D3DPRESENT_PARAMETERS d3dPram;
-	// バックバッファの数 => 一つ
-	d3dPram.BackBufferCount = 1;
-	// バックバッファのフォーマット => D3DFMT_UNKNOWN(フォーマットを知りません)
-	d3dPram.BackBufferFormat = D3DFMT_UNKNOWN;
-	/*
-		ウィンドウモード設定 => 定数で切り替え
-
-		true(ウィンドウ)、false(フルスクリーン)
-	*/
-	d3dPram.Windowed = true;
-	/*
-		スワップエフェクト => D3DSWAPEFFECT_DISCARD(自動設定)
-
-		スワップエフェクトとは：
-			バックバッファとフロントバッファへの切り替え方法
-	*/
-	d3dPram.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	initD3DP(&d3dPram);
 
 	// IDirect3DDevice9コンポーネントを取得します。
 	IDirect3DDevice9* pD3ddev9 = nullptr;
@@ -93,10 +78,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	);
 
 
-
-	//IDirect3D9* pDirect3D9 = Direct3DCreate9(D3D_SDK_VERSION);
-
-	MessageBox(NULL, L"Hello DxD9!!", L"Windows Programming", MB_OK);
+	//MessageBox(NULL, L"Hello DxD9!!", L"Windows Programming", MB_OK);
 
 	// メイン ゲーム ループ
 	while (TRUE) {
@@ -132,8 +114,31 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 //	return (int) msg.wParam;
 	return 0;
 }
+// ==================================================================
+// D3DPRESENT_PARAMETER 構造体を初期化します。
+// IDirect3DDevice9コンポーネントの生成に必要な初期化をします。
+// ==================================================================
+BOOLEAN initD3DP(D3DPRESENT_PARAMETERS *d3dPram) {
+	if (d3dPram == nullptr) return FALSE;
+	// バックバッファの数 => 一つ
+	d3dPram->BackBufferCount = 1;
+	// バックバッファのフォーマット => D3DFMT_UNKNOWN(フォーマットを知りません)
+	d3dPram->BackBufferFormat = D3DFMT_UNKNOWN;
+	/*
+		ウィンドウモード設定 => 定数で切り替え
 
+		true(ウィンドウ)、false(フルスクリーン)
+	*/
+	d3dPram->Windowed = true;
+	/*
+		スワップエフェクト => D3DSWAPEFFECT_DISCARD(自動設定)
 
+		スワップエフェクトとは：
+			バックバッファとフロントバッファへの切り替え方法
+	*/
+	d3dPram->SwapEffect = D3DSWAPEFFECT_DISCARD;
+	return TRUE;
+}
 
 //
 //  関数: MyRegisterClass()
